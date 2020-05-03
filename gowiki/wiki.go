@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -9,6 +8,9 @@ import (
 	"net/http"
 	"regexp"
 )
+
+const dataLoc = "./data/"
+const tmplLoc = "./templates/"
 
 // Page represents the structure for a wiki page
 type Page struct {
@@ -18,12 +20,12 @@ type Page struct {
 
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
-	return ioutil.WriteFile(filename, p.Body, 0600)
+	return ioutil.WriteFile(dataLoc+filename, p.Body, 0600)
 }
 
 func loadPage(title string) (*Page, error) {
 	filename := title + ".txt"
-	body, err := ioutil.ReadFile(filename)
+	body, err := ioutil.ReadFile(dataLoc + filename)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -31,7 +33,7 @@ func loadPage(title string) (*Page, error) {
 	return &Page{Title: title, Body: body}, nil
 }
 
-var templates = template.Must(template.ParseFiles("./templates/edit.html", "./templates/view.html"))
+var templates = template.Must(template.ParseFiles(tmplLoc+"edit.html", tmplLoc+"view.html"))
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	err := templates.ExecuteTemplate(w, tmpl+".html", p)
@@ -41,16 +43,6 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 }
 
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
-
-func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
-	m := validPath.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return "", errors.New("invalid Page Title")
-	}
-	// The title is the second subexpression.
-	return m[2], nil
-}
 
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
@@ -79,6 +71,10 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	http.Redirect(w, r, "/view/"+title, http.StatusFound)
 }
 
+func frontHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
+}
+
 func mock() {
 	fmt.Println("Creating test file:")
 	p1 := &Page{Title: "test", Body: []byte("This is a sample Page.")}
@@ -99,6 +95,7 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 }
 
 func main() {
+	http.HandleFunc("/", frontHandler)
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
