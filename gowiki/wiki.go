@@ -12,7 +12,7 @@ import (
 const dataLoc = "./data/"
 const tmplLoc = "./templates/"
 
-// Page represents the structure for a wiki page
+// Page : Represents the structure for a wiki page
 type Page struct {
 	Title string
 	Body  []byte
@@ -73,14 +73,6 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 
 func frontHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
-}
-
-func mock() {
-	fmt.Println("Creating test file:")
-	p1 := &Page{Title: "test", Body: []byte("This is a sample Page.")}
-	p1.save()
-	p2, _ := loadPage("test")
-	fmt.Println(string(p2.Body))
 }
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
