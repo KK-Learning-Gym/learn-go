@@ -57,21 +57,35 @@ func Test__PageLoad(t *testing.T) {
 	}
 }
 
-func Test__ViewHandler(t *testing.T) {
+func Test__HandlerStatusWhenFileExists(t *testing.T) {
 	// Test Config
 	title := "test"
 	body := []byte("This is a sample page.")
 	// Test Setup
 	createPage(title, body)
-	ts := runServer(viewHandler)
+	handlers := map[string]func(http.ResponseWriter, *http.Request, string){"view": viewHandler, "edit": editHandler}
 	// Test Run
-	url := fmt.Sprintf("%s/view/%s", ts.URL, title)
-	res, getErr := http.Get(url)
-	if getErr != nil {
-		fmt.Println(getErr)
+	for handlerName, handler := range handlers {
+		ts := runServer(handler)
+		url := fmt.Sprintf("%s/%s/%s", ts.URL, handlerName, title)
+		res, getErr := http.Get(url)
+		if getErr != nil {
+			fmt.Println(getErr)
+		}
+		if res.StatusCode != http.StatusOK {
+			t.Errorf("Expected StatusCode: 200, Received StatusCode: %v", res.StatusCode)
+		}
+
+		ts.Close()
 	}
-	if res.StatusCode != 200 {
-		t.Errorf("Expected StatusCode : 200 , Received StatusCode: %v", res.StatusCode)
+}
+
+func Test_SuccessfulRedirectOnRoot(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(frontHandler))
+
+	res, _ := http.Get(ts.URL)
+	if res.StatusCode != http.StatusFound {
+		t.Errorf("Expected StatusCode: 302, Received StatusCode: %v", res.StatusCode)
 	}
 
 	ts.Close()

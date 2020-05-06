@@ -12,11 +12,13 @@ import (
 const dataLoc = "./data/"
 const tmplLoc = "./templates/"
 
-// Page : Represents the structure for a wiki page
+// Page : Struct for a Wiki Page
 type Page struct {
 	Title string
 	Body  []byte
 }
+
+// Utility Functions
 
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
@@ -42,7 +44,19 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
-var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	validPath := regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
+	return func(w http.ResponseWriter, r *http.Request) {
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
+	}
+}
+
+// HTTP Handlers
 
 func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
@@ -73,17 +87,6 @@ func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 
 func frontHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/view/FrontPage", http.StatusFound)
-}
-
-func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		m := validPath.FindStringSubmatch(r.URL.Path)
-		if m == nil {
-			http.NotFound(w, r)
-			return
-		}
-		fn(w, r, m[2])
-	}
 }
 
 func main() {
